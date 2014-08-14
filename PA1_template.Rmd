@@ -2,19 +2,72 @@
 
 
 ## Loading and preprocessing the data
+```{r loadData , echo=TRUE,cache=TRUE}
+data <- read.csv(unz("activity.zip", "activity.csv"), header=TRUE,colClasses = c("numeric","Date","integer"),sep=",")
 
+```
 
 
 ## What is mean total number of steps taken per day?
-
-
+```{r centralValues , echo=TRUE,cache=TRUE,results='markup'}
+dailySteps = with(data,tapply(X = steps,INDEX = as.factor(date),FUN = sum,na.rm = TRUE))
+hist(dailySteps,col = "green")
+dev.copy(png,file = 'figure/plot1.png',width = 480,height = 480,units = 'px')
+dev.off
+dailyMeanSteps = with(data,tapply(X = steps,INDEX = as.factor(date),FUN = mean,na.rm = TRUE))
+dailyMedianSteps = with(data,tapply(X = steps,INDEX = as.factor(date),FUN = median,na.rm = TRUE))
+as.data.frame(dailyMeanSteps)
+as.data.frame(dailyMedianSteps)
+```
 
 ## What is the average daily activity pattern?
+```{r dailyActivityPattern , echo=TRUE,cache=TRUE,results='markup'}
+averageStepsPerFiveMinutes <-with(data,tapply(X = steps,INDEX = as.factor(interval),FUN = mean,na.rm = TRUE))
+par(bg = 'white')
+plot(row.names(averageStepsPerFiveMinutes),as.vector(averageStepsPerFiveMinutes),type = 'l',xlab = "Interval",ylab = "Average Steps",col = 'red')
+dev.copy(png,file = 'figure/plot2.png',width = 480,height = 480,units = 'px')
+dev.off
+maxVal <- max(averageStepsPerFiveMinutes)
+maxValueInterval <- names(averageStepsPerFiveMinutes)[which(as.vector(averageStepsPerFiveMinutes) == max(averageStepsPerFiveMinutes))]
+```
+
+The average number of steps (averaged across all the days) has the maximum value of `r maxVal`. This value is attained during the interval starting at `r maxValueInterval` minutes 
 
 
 
 ## Imputing missing values
+```{r imputingMissing ,echo=TRUE,cache=TRUE,results='markup'} 
+numMissingValues <- sum(is.na(data$steps))
+meanDailyActivity <- data.frame(interval = as.numeric(names(averageStepsPerFiveMinutes)),meanSteps = as.vector(averageStepsPerFiveMinutes))
+mergedData <- merge(x = data,y = meanDailyActivity,by.x = "interval",by.y  = "interval")
+mergedData$steps[which(is.na(mergedData$steps))] <- mergedData$meanSteps[which(is.na(mergedData$steps))]
+dailyStepsNew = with(mergedData,tapply(X = steps,INDEX = as.factor(date),FUN = sum,na.rm = TRUE))
+hist(dailyStepsNew,col = "blue")
+dev.copy(png,file = 'figure/plot3.png',width = 480,height = 480,units = 'px')
+dev.off
+dailyMeanStepsNew = with(mergedData,tapply(X = steps,INDEX = as.factor(date),FUN = mean,na.rm = TRUE))
+dailyMedianStepsNew = with(mergedData,tapply(X = steps,INDEX = as.factor(date),FUN = median,na.rm = TRUE))
+as.data.frame(dailyMeanStepsNew)
+as.data.frame(dailyMedianStepsNew)
 
+```
 
+Number of rows with missing values in the original Data  = `r numMissingValues`
+Difference between two Datasets :The new data is more like normal distribution in comparison to one with missing values
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r weekdayAnalysis ,echo=TRUE,cache=TRUE,results='markup'} 
+mergedData$dayType <-  ifelse(weekdays(mergedData$date)== "Sunday" | weekdays(mergedData$date)== "Saturday","weekend","weekday")
+weekdayData <- mergedData[mergedData$dayType == "weekday",]
+weekendData <- mergedData[mergedData$dayType == "weekend",]
+averageStepsWeekday <-with(weekdayData,tapply(X = steps,INDEX = as.factor(interval),FUN = mean,na.rm = TRUE))
+averageStepsWeekend <-with(weekendData,tapply(X = steps,INDEX = as.factor(interval),FUN = mean,na.rm = TRUE))
+par(mfrow=c(2,1),bg = 'white')
+
+plot(row.names(averageStepsWeekday),as.vector(averageStepsWeekday),type = 'l',xlab = "Interval",ylab = "Average Steps",col = 'blue',main = "Weekday")
+plot(row.names(averageStepsWeekend),as.vector(averageStepsWeekend),type = 'l',xlab = "Interval",ylab = "Average Steps",col = 'blue',main = "Weekend")
+dev.copy(png,file = 'figure/plot4.png',width = 480,height = 480,units = 'px')
+dev.off
+```
+
+
